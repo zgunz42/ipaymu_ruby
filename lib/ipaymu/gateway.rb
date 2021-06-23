@@ -11,7 +11,5 @@ module Ipaymu
         raise ArgumentError, "config is an invalid type"
       end
     end
-    
   end
-  
 end

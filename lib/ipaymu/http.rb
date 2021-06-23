@@ -1,4 +1,4 @@
-module Braintree
+module Ipaymu
   class Http # :nodoc:
 
     LINE_FEED = "\r\n"
@@ -84,11 +84,8 @@ module Braintree
 
     def _compose_headers(header_overrides = {})
       headers = {}
-      headers["Accept"] = "application/xml"
-      headers["User-Agent"] = @config.user_agent
-      headers["Accept-Encoding"] = "gzip"
-      headers["X-ApiVersion"] = @config.api_version
-      headers["Content-Type"] = "application/xml"
+      headers["Accept"] = "application/json"
+      headers["Content-Type"] = "application/json"
 
       headers.merge(header_overrides)
     end

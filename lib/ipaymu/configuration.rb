@@ -3,15 +3,17 @@ module Ipaymu
     API_VERSION = "2" # :nodoc:
     DEFAULT_ENDPOINT = "api" # :nodoc:
 
-    READABLE_ATTRIBUTE = [
+    READABLE_ATTRIBUTES = [
       :va,
-      :apiKey,
+      :apikey,
+      :paymethod,
       :environment
     ]
 
     WRITABLE_ATTRIBUTES = [
       :va,
-      :apiKey,
+      :apikey,
+      :paymethod,
       :environment,
       :custom_user_agent,
       :endpoint,
@@ -24,8 +26,19 @@ module Ipaymu
       attr_writer(*WRITABLE_ATTRIBUTES)
     end
 
-    attr_reader(*READABLE_ATTRIBUTE)
+    attr_reader(*READABLE_ATTRIBUTES)
     attr_writer(*WRITABLE_ATTRIBUTES)
+
+    def self.expectant_reader(*attributes) # :nodoc:
+      attributes.each do |attribute|
+        (class << self; self; end).send(:define_method, attribute) do
+          attribute_value = instance_variable_get("@#{attribute}")
+          raise ConfigurationError.new("Braintree::Configuration.#{attribute.to_s} needs to be set") if attribute_value.nil? || attribute_value.to_s.empty?
+          attribute_value
+        end
+      end
+    end
+    expectant_reader(*READABLE_ATTRIBUTES)
 
 
     def self.environment=(env)
@@ -43,17 +56,49 @@ module Ipaymu
     def self.instantiate
       config = new(
         :custom_user_agent => @custom_user_agent,
-        :endpoint => @endpoint
-        :logger => logger
+        :endpoint => @endpoint,
+        :logger => logger,
+        :va => va,
+        :apikey => apikey,
+        :paymethod => paymethod,
+        :environment => environment,
       )
     end
 
-    def api_version 
-      API_VERSION
+    def initialize(options = {})
+      WRITABLE_ATTRIBUTES.each do |attr|
+        instance_variable_set "@#{attr}", options[attr]
+      end
+
+      @environment = @environment.to_sym if @environment
+
+      # parser = Braintree::CredentialsParser.new
+      # if options[:client_id] || options[:client_secret]
+      #   parser.parse_client_credentials(options[:client_id], options[:client_secret])
+      #   @client_id = parser.client_id
+      #   @client_secret = parser.client_secret
+      #   @environment = parser.environment
+      # elsif options[:access_token]
+      #   parser.parse_access_token(options[:access_token])
+
+      #   _check_for_mixed_environment(options[:environment], parser.environment)
+
+      #   @access_token = parser.access_token
+      #   @environment = parser.environment
+      #   @merchant_id = parser.merchant_id
+      # else
+      #   @merchant_id = options[:merchant_id] || options[:partner_id]
+      # end
     end
 
-    def protocol # :nodoc:
-      ssl? ? "https" : "http"
+    # def _check_for_mixed_credentials(options)
+    #   if (options[:client_id] || options[:client_secret]) && (options[:public_key] || options[:private_key])
+    #     raise ConfigurationError.new("Braintree::Gateway cannot be initialized with mixed credential types: client_id and client_secret mixed with public_key and private_key.")
+    #   end
+    # end
+
+    def api_version
+      API_VERSION
     end
 
     def http_open_timeout
@@ -65,11 +110,19 @@ module Ipaymu
     end
 
     def base_url
-      "#{protocol}://#{server}"
+      "https://#{server}/api/v#{api_version}"
     end
 
     def logger
       @logger ||= self.class._default_logger
+    end
+
+    def self.logger
+      @logger ||= _default_logger
+    end
+
+    def self.signature_service
+      instantiate.signature_service
     end
 
     def server
@@ -78,15 +131,6 @@ module Ipaymu
         "sandbox.ipaymu.com"
       when :production
         "my.ipaymu.com"
-      end
-    end
-
-    def ssl? # :nodoc:
-      case @environment
-      when :development, :integration
-        false
-      when :production, :sandbox
-        true
       end
     end
 
@@ -100,6 +144,33 @@ module Ipaymu
       logger.level = Logger::INFO
       logger
     end
+
+    def signature_service
+      @signature_service ||= SignatureService.new(@apikey)
+    end
+
+  # General API
+  #  $this->balance          = $base . '/balance';
+
+  #  $this->transaction      = $base . '/transaction';
+  #  $this->history          = $base . '/history';
+  #  $this->banklist         = $base . '/banklist';
+
+
+  # Payment API 
+  #  $this->redirectpayment  = $base . '/payment';
+  #  $this->directpayment    = $base . '/payment/direct';
+
+  # COD Payment
+  #  $this->codarea          = $base . '/cod/getarea';
+  #  $this->codrate          = $base . '/cod/getrate';
+  #  $this->codpickup        = $base . '/cod/pickup';
+  #  $this->codpayment       = $base . '/payment/cod';
+
+  # COD Tracking
+  #  $this->codawb           = $base . '/cod/getawb';
+  #  $this->codtracking      = $base . '/cod/tracking';
+  #  $this->codhistory       = $base . '/cod/history';
 
   end
 
