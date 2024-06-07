@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "builder", "3.2.4"
+gem "builder", "3.3.0"
 gem "libxml-ruby", "3.2.0"
 
 group :development do
