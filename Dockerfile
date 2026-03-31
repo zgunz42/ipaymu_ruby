@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:buster-20240612
 
 RUN apt-get update
 RUN apt-get -y install gnupg curl procps build-essential libxml2-dev
